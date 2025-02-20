@@ -30,28 +30,45 @@ def subprocess_inference(config, input_data, tables_only, crop_size, query_all_d
     """
     Subprocess function to execute the inference logic.
     """
-    from sparrow_parse.extractors.vllm_extractor import VLLMExtractor
-    from sparrow_parse.vllm.inference_factory import InferenceFactory
+    if config["method"] == "qwenapi":
+        # Use the Qwen API instead of local inference.
+        from sparrow_parse.inference_qwenapi import inference_with_qwen_api  # Create this module with your API call logic.
+        # For simplicity, assume input_data is a list with a single dictionary containing keys:
+        # "file_path" and "text_input" (the prompt).
+        file_input = input_data[0]
+        llm_output, num_pages = inference_with_qwen_api(
+            prompt=file_input.get("text_input"),
+            file_path=file_input.get("file_path"),
+            tables_only=tables_only,
+            crop_size=crop_size,
+            query_all_data=query_all_data,
+            debug_dir=debug_dir,
+            debug=debug
+        )
+        return llm_output, num_pages
+    else:
+        from sparrow_parse.extractors.vllm_extractor import VLLMExtractor
+        from sparrow_parse.vllm.inference_factory import InferenceFactory
 
-    # Initialize the extractor and inference instance
-    factory = InferenceFactory(config)
-    model_inference_instance = factory.get_inference_instance()
-    extractor = VLLMExtractor()
+        # Initialize the extractor and inference instance
+        factory = InferenceFactory(config)
+        model_inference_instance = factory.get_inference_instance()
+        extractor = VLLMExtractor()
 
-    # Run inference
-    llm_output, num_pages = extractor.run_inference(
-        model_inference_instance,
-        input_data,
-        tables_only=tables_only,
-        generic_query=query_all_data,
-        crop_size=crop_size,
-        debug_dir=debug_dir,
-        debug=debug,
-        mode=None
-    )
+        # Run inference
+        llm_output, num_pages = extractor.run_inference(
+            model_inference_instance,
+            input_data,
+            tables_only=tables_only,
+            generic_query=query_all_data,
+            crop_size=crop_size,
+            debug_dir=debug_dir,
+            debug=debug,
+            mode=None
+        )
 
-    # Return results
-    return llm_output, num_pages
+        # Return results
+        return llm_output, num_pages
 
 
 class SparrowParsePipeline(Pipeline):
@@ -240,6 +257,12 @@ class SparrowParsePipeline(Pipeline):
             return {
                 "method": method,
                 "model_name": options[1]
+            }, tables_only, validation_off
+        elif method == 'qwenapi':  # <-- New branch for Qwen API
+            return {
+                "method": method,
+                "api_url": options[1],  # The API endpoint URL; can also be hardcoded if desired.
+                "openrouter_api_key": os.getenv("OPENROUTER_API_KEY")
             }, tables_only, validation_off
         else:
             # Extendable for additional backends

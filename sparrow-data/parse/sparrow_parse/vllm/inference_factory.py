@@ -1,7 +1,7 @@
 from sparrow_parse.vllm.huggingface_inference import HuggingFaceInference
 from sparrow_parse.vllm.local_gpu_inference import LocalGPUInference
 from sparrow_parse.vllm.mlx_inference import MLXInference
-
+from sparrow_parse.vllm.qwen_api_inference import QwenAPIInference
 
 class InferenceFactory:
     def __init__(self, config):
@@ -15,6 +15,11 @@ class InferenceFactory:
             return LocalGPUInference(model=model, device=self.config.get("device", "cuda"))
         elif self.config["method"] == "mlx":
             return MLXInference(model_name=self.config["model_name"])
+        elif self.config["method"] == "qwenapi":  # Add Qwen API support
+            return QwenAPIInference(
+                api_url=self.config["api_url"],
+                api_key=self.config["openrouter_api_key"],
+            )
         else:
             raise ValueError(f"Unknown method: {self.config['method']}")
 
